@@ -21,7 +21,8 @@ class BayesOptAttack(BaseAttack):
                  verbose: bool = True,
                  terminate_after_n_fail: int = None,
                  n_hop_constraint: int = None,
-                 preserve_disconnected_components: bool = False,):
+                 preserve_disconnected_components: bool = False,
+                 device: str = 'cuda'):
         """
         Attacking classifier via Bayesian optimisation with GP/Bayesian Linear regression surrogate with Weisfeiler-
             Lehman kernels.
@@ -73,6 +74,8 @@ class BayesOptAttack(BaseAttack):
         self.terminate_after_n_fail = terminate_after_n_fail if terminate_after_n_fail is not None and terminate_after_n_fail > 0 else None
         self.n_hop_constraint = n_hop_constraint if n_hop_constraint is not None and n_hop_constraint > 0 else None
         self.preserve_disconnected_components = preserve_disconnected_components
+        # self.device = device
+        # self.classifier = self.classifier
 
     def attack(self, graph: dgl.DGLGraph, label: torch.tensor, budget, max_queries: int):
         """
@@ -88,9 +91,9 @@ class BayesOptAttack(BaseAttack):
         """
         if isinstance(budget, float):
             assert 0 < budget < 1., f'if a float is supplied, this number must be within 0 and 1 but got {budget}'
-            budget = np.round(budget * graph.num_edges()).astype(np.int)
+            budget = np.round(budget * graph.num_edges()).astype(np.int32)
         if isinstance(self.edit_per_stage, float):
-            self.edit_per_stage = np.round(self.edit_per_stage * graph.num_edges()).astype(np.int)
+            self.edit_per_stage = np.round(self.edit_per_stage * graph.num_edges()).astype(np.int32)
         stages, edits_per_stage = self.get_stage_statistics(max_queries, budget)
         if self.verbose:
             print(f'Total number of {max_queries} of queries is divided into {stages}')
@@ -242,7 +245,7 @@ class BayesOptAttack(BaseAttack):
             top_k = 3
             pop_size = max(n_samples // n_round, 100)
             # optionally set the fraction of randomly generated samples
-            n_rand = np.round(pop_size * self.acq_settings['random_frac']).astype(np.int)
+            n_rand = np.round(pop_size * self.acq_settings['random_frac']).astype(np.int32)
             n_mutate = pop_size - n_rand
 
             genetic_optimiser = Genetic(classifier=lambda x_: 0, loss_fn=lambda x_: 0,

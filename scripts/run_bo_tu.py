@@ -21,13 +21,14 @@ import numpy as np
 import datetime
 import pickle
 import dgl
+import tqdm
 
 parser = argparse.ArgumentParser(description='Run BO attack on TU datasets')
 
 parser.add_argument('--dataset', type=str, default='COLLAB')
 parser.add_argument('-m', '--method', type=str, default='bo')
 parser.add_argument('--loss', type=str, default='nettack')
-parser.add_argument('--model', type=str, default='gcn', choices=['gcn', 'gin', 's2v'])
+parser.add_argument('--model', type=str, default='gcn', choices=['gcn', 'gin', 's2v', 'gcn_noise'])
 parser.add_argument('--seed', type=int, default=0, help='RNG seed.')
 parser.add_argument('--gpu', type=str, default=None, help='A gpu device number if available.')
 parser.add_argument('--n_trials', type=int, default=1)
@@ -61,8 +62,16 @@ n_trials = args.n_trials
 n_samples = args.n_samples
 n_perturb = args.budget
 model_name = args.model
+
+if args.model.endswith("_noise"):
+    model_name = args.model.split("_noise")[0]
+else:
+    model_name = args.model
+
 dataset = args.dataset
 dataset_split = get_dataset_split(dataset)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(device)
 
 # Time string will be used as the directory name
 time_string = datetime.datetime.now()
@@ -72,7 +81,10 @@ if dataset == 'er_graphs':
 else:
     data = Data(dataset_name=dataset, dataset_split=dataset_split, seed=seed)
 if args.exp_name is None:
-    save_path = args.save_path + f'/{model_name}_{dataset}_{args.method}_{seed}/'
+    if args.model.endswith("_noise"):
+        save_path = args.save_path + f'/{args.model}_{dataset}_{args.method}_{seed}/'
+    else:
+        save_path = args.save_path + f'/{model_name}_{dataset}_{args.method}_{seed}/'
 else:
     save_path = args.save_path + f'/{args.exp_name}_{model_name}_{dataset}_{args.method}_{seed}_{time_string}/'
 
@@ -87,11 +99,11 @@ option_file.close()
 
 model_class = get_model_class(model_name)
 model = model_class(data.feature_dim, data.number_of_labels)
-model_path = join(args.model_path, f'{args.model}_{dataset}_{seed}.pt')
+model_path = join(args.model_path, f'{model_name}_{dataset}_{seed}.pt')
 model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
-evaluation_logs = pd.read_csv(join('../src/output', 'evaluation_logs', f'{args.model}_{dataset}_{seed}.csv'))
+evaluation_logs = pd.read_csv(join('../output', 'evaluation_logs', f'{model_name}_{dataset}_{seed}.csv'))
 evaluation_logs = evaluation_logs.query('dataset == "c"')
 
 correct_indices = []
@@ -121,6 +133,14 @@ for i in range(len(all_labels)):
 
 print(f' Correctly classified samples: {len(correct_indices)}')
 
+if args.model.endswith("_noise"):
+    model_name = args.model
+    model_class = get_model_class(model_name)
+    model = model_class(data.feature_dim, data.number_of_labels)
+    model_path = join(args.model_path, f'{model_name.split("_noise")[0]}_{dataset}_{seed}.pt')
+    model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    model.eval()
+
 all_labels = torch.tensor(all_labels)
 n_success = 0
 dfs, adv_examples = [], []
@@ -136,7 +156,7 @@ for trial in range(n_trials):
 
     print(f'Starting trial {trial}/{n_trials}')
 
-    for i, sample_id in enumerate(selected_indices):
+    for i, sample_id in tqdm.tqdm(enumerate(selected_indices), total = len(selected_indices)):
         n_stagnation = 0
         best_loss = -np.inf
         # try:

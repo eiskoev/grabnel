@@ -1,11 +1,11 @@
-from . import GCNGraphClassifier, GINGraphClassifier, ChebyGIN
-try:
-    from pytorch_structure2vec.s2v_lib.embedding import EmbedMeanField, EmbedLoopyBP
-    from . import S2VClassifier
-    s2v_available = True
-except:
-    print('Failed to import S2V surrogate!')
-    s2v_available = False
+from . import GCNGraphClassifier, GINGraphClassifier, ChebyGIN, GCNNoise
+# try:
+#     from pytorch_structure2vec.s2v_lib.embedding import EmbedMeanField, EmbedLoopyBP
+#     from . import S2VClassifier
+#     s2v_available = True
+# except:
+#     print('Failed to import S2V surrogate!')
+#     s2v_available = False
 
 
 def get_model_class(model_name):
@@ -16,8 +16,10 @@ def get_model_class(model_name):
         model_class = GINGraphClassifier
     elif model_name == 'chebygin':
         model_class = ChebyGIN
-    elif model_name == 's2v' and s2v_available:
-        model_class = S2VClassifier
+    elif model_name == 'gcn_noise':
+        model_class  = GCNNoise
+    # elif model_name == 's2v' and s2v_available:
+    #     model_class = S2VClassifier
     else:
         raise ValueError
     return model_class

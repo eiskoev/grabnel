@@ -64,7 +64,7 @@ def get_allowed_nodes_k_hop(graph: dgl.DGLGraph, previous_edits, k_hop: int = 1)
 
 
 def number_connected_components(dglgraph):
-    return connected_components(dglgraph.adjacency_matrix(scipy_fmt="csr"))[0]
+    return connected_components(dglgraph.adj_external(scipy_fmt="csr"))[0]
 
 
 def random_sample_flip(graph: dgl.DGLGraph, budget: int,

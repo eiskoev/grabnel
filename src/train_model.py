@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 import torch.optim as optim
 
+from tqdm import tqdm
 from attack.data import Data, ERData
 from attack.utils import (classification_loss, get_dataset_split, get_device,
                           number_of_correct_predictions, setseed)
